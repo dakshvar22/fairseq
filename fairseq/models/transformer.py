@@ -590,7 +590,13 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         )
         if not features_only:
             x = self.output_layer(x)
+#         x = self._modulate_probs(x)
         return x, extra
+
+    def _modulate_probs(self, original_probs):
+        print(original_probs.shape)
+#         return torch.log((torch.exp(original_probs) + 1.0)/2.0)
+        return original_probs/2.0
 
     def extract_features(
         self,

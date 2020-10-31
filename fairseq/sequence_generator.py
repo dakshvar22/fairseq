@@ -543,19 +543,19 @@ class EnsembleModel(torch.nn.Module):
 
     @torch.no_grad()
     def forward_decoder(self, tokens, encoder_outs, temperature=1.):
-        if len(self.models) == 1:
-            return self._decode_one(
-                tokens,
-                self.models[0],
-                encoder_outs[0] if self.has_encoder() else None,
-                self.incremental_states,
-                log_probs=True,
-                temperature=temperature,
-            )
+#         if len(self.models) == 1:
+#             return self._decode_one(
+#                 tokens,
+#                 self.models[0],
+#                 encoder_outs[0] if self.has_encoder() else None,
+#                 self.incremental_states,
+#                 log_probs=True,
+#                 temperature=temperature,
+#             )
 
         log_probs = []
         avg_attn = None
-        for model, encoder_out in zip(self.models, encoder_outs):
+        for index,(model, encoder_out) in enumerate(zip(self.models, encoder_outs)):
             probs, attn = self._decode_one(
                 tokens,
                 model,
@@ -565,12 +565,15 @@ class EnsembleModel(torch.nn.Module):
                 temperature=temperature,
             )
             log_probs.append(probs)
+            log_probs.append(torch.zeros_like(probs))
             if attn is not None:
                 if avg_attn is None:
                     avg_attn = attn
                 else:
                     avg_attn.add_(attn)
-        avg_probs = torch.logsumexp(torch.stack(log_probs, dim=0), dim=0) - math.log(len(self.models))
+        
+        # avg_probs = torch.logsumexp(torch.stack(log_probs, dim=0), dim=0) - math.log(len(self.models))
+        avg_probs = torch.logsumexp(torch.stack(log_probs, dim=0), dim=0) - math.log(2)
         if avg_attn is not None:
             avg_attn.div_(len(self.models))
         return avg_probs, avg_attn
